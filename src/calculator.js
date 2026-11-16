@@ -1,4 +1,5 @@
-// Supports addition (+), subtraction (-), multiplication (*), and division (/).
+// Supports addition (+), subtraction (-), multiplication (*), division (/),
+// modulo (%), exponentiation (^), and square root (sqrt).
 const operations = {
   "+": (left, right) => left + right,
   add: (left, right) => left + right,
@@ -10,15 +11,34 @@ const operations = {
   "/": (left, right) => left / right,
   "÷": (left, right) => left / right,
   divide: (left, right) => left / right,
+  "%": (left, right) => left % right,
+  modulo: (left, right) => left % right,
+  "^": (left, right) => left ** right,
+  power: (left, right) => left ** right,
 };
 
 function calculate(operation, left, right) {
-  if (!Object.prototype.hasOwnProperty.call(operations, operation)) {
+  const isSquareRoot = operation === "sqrt" || operation === "√";
+  if (
+    !isSquareRoot &&
+    !Object.prototype.hasOwnProperty.call(operations, operation)
+  ) {
     throw new Error(`Unsupported operation: ${operation}`);
   }
-  const operationHandler = operations[operation];
 
-  if (!Number.isFinite(left) || !Number.isFinite(right)) {
+  if (!Number.isFinite(left)) {
+    throw new Error("Operands must be finite numbers");
+  }
+  if (isSquareRoot) {
+    if (right !== undefined) {
+      throw new Error("Square root accepts one operand");
+    }
+    if (left < 0) {
+      throw new Error("Cannot take the square root of a negative number");
+    }
+    return Math.sqrt(left);
+  }
+  if (!Number.isFinite(right)) {
     throw new Error("Operands must be finite numbers");
   }
   if (operation === "/" || operation === "÷" || operation === "divide") {
@@ -26,36 +46,39 @@ function calculate(operation, left, right) {
       throw new Error("Cannot divide by zero");
     }
   }
+  if (operation === "%" || operation === "modulo") {
+    if (right === 0) {
+      throw new Error("Cannot modulo by zero");
+    }
+  }
 
-  return operationHandler(left, right);
+  const result = operations[operation](left, right);
+  if (!Number.isFinite(result)) {
+    throw new Error("The result is not a finite number");
+  }
+  return result;
 }
 
 if (require.main === module) {
-  const [operation, leftInput, rightInput, ...extraArguments] =
-    process.argv.slice(2);
+  const [operation, ...operandInputs] = process.argv.slice(2);
+  const isSquareRoot = operation === "sqrt" || operation === "√";
+  const expectedOperandCount = isSquareRoot ? 1 : 2;
 
   try {
     if (
       !operation ||
-      leftInput === undefined ||
-      rightInput === undefined ||
-      extraArguments.length > 0
+      operandInputs.length !== expectedOperandCount
     ) {
       throw new Error(
-        "Usage: node src/calculator.js <+|-|*|/|add|subtract|multiply|divide> <first> <second>",
+        "Usage: node src/calculator.js <+|-|*|/|%|^|add|subtract|multiply|divide|modulo|power|sqrt> <operand> [second operand]",
       );
     }
-    if (leftInput.trim() === "" || rightInput.trim() === "") {
+    if (operandInputs.some((input) => input.trim() === "")) {
       throw new Error("Operands must be finite numbers");
     }
 
-    const left = Number(leftInput);
-    const right = Number(rightInput);
-    const result = calculate(operation, left, right);
-    if (!Number.isFinite(result)) {
-      throw new Error("The result is not a finite number");
-    }
-
+    const operands = operandInputs.map(Number);
+    const result = calculate(operation, ...operands);
     console.log(result);
   } catch (error) {
     console.error(error.message);
